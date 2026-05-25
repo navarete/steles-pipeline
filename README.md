@@ -101,20 +101,20 @@ pip-compile --cert=None --client-cert=None --index-url=None --output-file=requir
 
 Main dependencies include:
 
-- Python >= 3.10
-- astropy = 3.2.1 
-- ccdproc = 2.2.0
-- datetime = 5.5
-- glob = 0.7
-- json = 0.8.5
-- lacosmic = 0.1.1
-- logging = 
-- matplotlib = 3.1.1
-- numpy = 1.16.5
-- os = 
-- pandas = 0.25.1
-- scipy = 1.3.1
-- time = 
+- Python (>= 3.10)
+- astropy (3.2.1)
+- ccdproc (2.2.0)
+- datetime (5.5)
+- glob (0.7)
+- json (0.8.5)
+- lacosmic (0.1.1)
+- logging=
+- matplotlib (3.1.1)
+- numpy (1.16.5)
+- os
+- pandas (0.25.1)
+- scipy (1.3.1)
+- time
 
 Additional packages may be required depending on future extensions.
 
@@ -369,7 +369,7 @@ Current limitations include:
 
 If you use STELES Pipeline in scientific work, please acknowledge:
 
-> STELES data were reduced using the STELES Python data reduction pipeline developed by the STELES instrument team.
+> STELES data were reduced using the STELES Data Reduction Pipeline developed by the STELES instrument team.
 
 
 ---
