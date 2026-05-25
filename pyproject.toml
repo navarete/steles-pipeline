@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "steles-pipeline"
+version = "2026.0.0"
+dependencies = [
+  "astropy>=3.2.1",
+  "ccdproc>=2.2.0",
+  "datetime >= 5.5",
+  "glob >= 0.7",
+  "json >= 0.8.5",
+  "lacosmic == 0.1.1",
+  "logging",
+  "matplotlib >= 3.1.1",
+  "numpy >= 1.16.5",
+  "os",
+  "pandas >= 0.25.1",
+  "scipy >= 1.3.1",
+  "time",
+]
+requires-python = ">= 3.10"
+authors = [
+  {name = "Felipe Navarete", email = "fnavarete@lna.br"}
+]
+maintainers = [
+  {name = "Felipe Navarete", email = "fnavarete@lna.br"}
+]
+description = "STELES Data Reduction Pipeline"
+readme = {file = "README.md", content-type = "text/markdown"}
+license = "BSD-3-Clause"
+license-files = ["LICENSE.*"]
+keywords = ["STELES", "echelle", "spectroscopy", "SOAR", "Astronomy"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python"
+]
+
+[project.urls]
+Homepage = "https://noirlab.edu/public/programs/ctio/soar-telescope/steles/"
+#Documentation = "https://readthedocs.org"
+Repository = "https://github.com/navarete/steles-pipeline/"
+"Bug Tracker" = "https://github.com/navarete/steles-pipeline/issues"
+Changelog = "https://github.com/navarete/steles-pipeline/blob/master/CHANGELOG.md"

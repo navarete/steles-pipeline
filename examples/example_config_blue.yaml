@@ -1,0 +1,50 @@
+config = {
+    "run_stages": ["all"],
+    "overwrite": True,
+    "raw_directory": "/home/user/steles-pipeline/data/example_data_blue/",
+
+    "flat_list": [flat_0040],
+    "arc_list": [thar_1s_0013, thar_60s_0014],
+    "sci_list": [sci_0054],
+    
+    "fileout_flat": "master_flat",
+    "fileout_sci":  "master_science",
+    "fileout_arc":  "master_ThAr",
+
+    "average_sigma_clip": 5,
+
+    "saturation_threshold_for_arc": 40000,
+    
+    "trace_source":               "sci",
+    "refit_trace_skip_orders":   [None],
+    "fail_on_trace_intersection": False,
+    
+    "aperture_orders": [0, 9, 19, 29, 39],
+    "aperture_vmax": {"flat": 4.0, "arc": 3.5, "sci": 4.0},
+    
+    "x_extract": [-12,+4],
+
+    "window_fit_peak":             11,
+    "wavesolution_max_fwhm":     10.0,
+    "wavelength_pixel_offset":     -2,
+    "wavesolution_ndeg":            3,
+    "wavesolution_niter":           3,
+    "wavesolution_rms_threshold": 2.0,
+    
+    "spatdist_ndeg":         2,
+    "spatdist_npix_step":    1,
+    "spatdist_saturation_threshold": 1000000,
+    "spatdist_niter":        3,
+    "spatdist_sigma_init": 3.0,
+    "spatdist_sigma_min":  1.0,
+    "spatdist_sigma_step": 0.5,
+
+    "blaze_mode":   "simple",
+    "blaze_min_deg":      15,
+    "blaze_max_deg":      55,
+    "blaze_sigma":         5,
+    "qc_blaze_ncols":      7,
+    "qc_blaze_n_panels":  10,
+    "qc_snr_n_panels":     4,
+    "qc_final1d_n_panels": 4    
+}

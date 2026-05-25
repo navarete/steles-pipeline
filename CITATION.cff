@@ -1,0 +1,6 @@
+cff-version: 1.2.0
+title: STELES Data Reduction Pipeline
+authors:
+  - family-names: Navarete
+    given-names: Felipe
+message: If you use this pipeline, please refer it.
