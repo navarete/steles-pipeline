@@ -74,7 +74,7 @@ Current status:
 Clone the repository:
 
 ```bash
-git clone https://github.com/navarete/STELES.git
+git clone https://github.com/navarete/steles-pipeline.git
 cd STELES/pipeline/
 ```
 
@@ -90,10 +90,6 @@ Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
-
-(MUST create requirements.txt)
-
-pip-compile --cert=None --client-cert=None --index-url=None --output-file=requirements.txt --pip-args=None requirements.in
 
 ---
 
@@ -239,17 +235,17 @@ Outputs:
 
 Required:
 
-- Quartz flat-field exposures
-- ThAr arc lamp exposures
-- Science observations
+- Quartz flat-field exposures (single or multiple frames)
+- ThAr arc lamp exposures (single or two frames taken with different exposure times)
+- Science observations (single or multiple frames)
 
 Recommended:
 
-- High S/N spectrophotometric standard star for tracing
+- High S/N spectrophotometric standard star for tracing (check [Optical and UV Spectrophotometric Standard Stars][https://www.eso.org/sci/observing/tools/standards/spectra.html])
 
 Optional (not yet implemented):
 
-- Bias frames
+- Bias frames (using overscan instead)
 - Dark frames
 - Sky frames
 
@@ -361,7 +357,6 @@ Current limitations include:
 - No sky subtraction
 - No optimal extraction
 - Limited automatic handling of pathological tracing cases
-- Configuration currently requires manual setup
 
 ---
 
@@ -392,8 +387,8 @@ BSD-3-Clause
 
 Pipeline maintainer:
 
-**Felipe Navarete**  
-Laboratório Nacional de Astrofísica (LNA)  
+**Felipe Navarete**
+Laboratório Nacional de Astrofísica (LNA)
 Brazil
 
 GitHub Issues preferred for bug reports.
