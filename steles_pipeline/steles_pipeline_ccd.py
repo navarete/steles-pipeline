@@ -16,24 +16,9 @@ from astropy.stats import sigma_clip, mad_std
 from astropy.table import Table
 from ccdproc import combine
 from scipy.ndimage import center_of_mass, map_coordinates
+from scipy.optimize import curve_fit
 from scipy.signal import medfilt
-#from astropy.stats import , mad_std
-#from astropy.convolution import convolve, Gaussian1DKernel
-#from astropy.modeling.models import Gaussian2D
 from astropy.nddata import CCDData
-#from astropy.nddata.utils import Cutout2D
-#from astropy.time import Time
-#from astropy.visualization import simple_norm
-#from astropy.table import Table
-#from astropy import units as u
-#from ccdproc import combine
-
-#import scipy.signal
-#from scipy.interpolate import interp1d
-#from scipy.optimize import curve_fit
-#from scipy.signal import correlate2d, medfilt
-
-
 
 def header2python(str_hdr, pixel=True):
     """
@@ -312,7 +297,7 @@ def steles_cosmicray_removal(fits_file,
         img_clean = np.flip(img_clean,1)
     
     if save_fits:
-        steles_save_file(img_clean, header=hdr_out, file_out=fits_file.replace(".fits","_cleancr.fits"), quiet=True)
+        fits.writeto(fits_file.replace(".fits","_cleancr.fits"), img_clean, hdr_out, overwrite=True)
         
     if return_cosmicray_mask:
         return img_clean, hdr_out, cr_mask
@@ -607,7 +592,338 @@ def fit_trace_stellar_profile(fits_file, trace_file, order, poly_order=4, sigma_
 
     return coeffs
 
+import numpy as np
+from scipy.optimize import curve_fit
 
+
+def gaussian(x, amp, x0, sigma, offset):
+    return amp * np.exp(-(x - x0)**2 / (2 * sigma**2)) + offset
+
+def fit_order_center(profile, xpix):
+    """ Function to determine the center of the spatial profile of each spectral order using a gaussian model """
+
+    # remove local background
+    background = np.median(profile)
+    profile = profile - background
+
+    if np.max(profile) <= 0:
+        return None
+
+    amp0 = np.max(profile)
+    x0 = xpix[np.argmax(profile)]
+    sigma0 = 3.0
+
+    try:
+
+        popt, _ = curve_fit(
+            gaussian,
+            xpix,
+            profile,
+            p0=[amp0, x0, sigma0, 0],
+            bounds=(
+                [0, xpix.min(), 0.5, -np.inf],
+                [np.inf, xpix.max(), 20.0, np.inf]
+            )
+        )
+
+        amp, center, sigma, offset = popt
+
+        fwhm = 2.355 * sigma
+
+        return center, amp, fwhm
+
+    except:
+        return None
+    
+def estimate_center_fwhm(profile, xpix):
+    """ Function to determine the half-peak width of theof the spatial profile """
+
+    background = np.median(profile)
+    profile = profile - background
+
+    peak = np.max(profile)
+
+    if peak <= 0:
+        return None
+
+    halfmax = peak / 2.0
+
+    above = np.where(profile > halfmax)[0]
+
+    if len(above) < 2:
+        return None
+
+    left = xpix[above[0]]
+    right = xpix[above[-1]]
+
+    return 0.5 * (left + right)
+
+def trace_stellar_profile(
+        fits_file,
+        x_guess,
+        y_center=2048,
+        y_range=[500,3500],
+        half_width=10,
+        sigma_threshold=3,
+        step=1,
+        poly_order=4,
+        number_of_iterations=3,
+        collapse_rows=5,
+        max_shift=2.0,
+        max_failures=5,
+        use_gaussian=True,
+        use_fwhm_fallback=True,
+        show_plot=True,
+        displ_max_noise=10,
+        debug=True):
+    """
+    Trace a stellar profile along the y-axis and fit a polynomial x=f(y).
+
+    Parameters
+    ----------
+    fits_file : str
+        Path to the FITS file.
+    x_guess : float
+        Initial guess of the x position at y_center.
+    y_center : int
+        Central y position (default=2048).
+    half_width : int
+        Half-width of the extraction box around the current x position.
+    step : int
+        Step size in y when tracing.
+    poly_order : int
+        Degree of the polynomial fit.
+
+    Returns
+    -------
+    y_points : ndarray
+        Y positions traced.
+    x_points : ndarray
+        Measured X positions along the trace.
+    poly_coeffs : ndarray
+        Polynomial coefficients for x=f(y).
+    """
+
+    # Load image
+    if isinstance(fits_file, str):
+        image = fits.getdata(fits_file)
+    else:
+        image = np.asarray(fits_file)
+
+
+    # Load image
+    #image = fits.getdata(fits_file)
+    ny, nx = image.shape
+
+    # Estimate background noise
+    background = np.median(image)
+    noise = 1.4826 * np.median(np.abs(image - background))
+    
+    # Define y-range
+    if y_range is None:
+        y_min, y_max = 0, ny - 1
+    else:
+        y_min, y_max = y_range
+    
+    trace_half_height = collapse_rows // 2
+
+    x_min = int(max(0, x_guess - half_width))
+    x_max = int(min(nx, x_guess + half_width + 1))
+    
+    profile = np.sum(image[max(0, y_center-trace_half_height):min(ny, y_center+trace_half_height+1), x_min:x_max],axis=0)
+
+    xpix = np.arange(x_min, x_max)
+
+    fit_result = fit_order_center(profile, xpix)
+
+    if fit_result is not None:
+        x_center_fit, amp, fwhm = fit_result
+
+    else:
+        x_center_fit = x_guess
+    
+    fwhm_threshold = 10
+    
+    def follow_trace(direction, x_start, debug=debug):
+        """Trace in one direction (+1 for up, -1 for down)"""
+
+        y_positions = []
+        x_positions = []
+
+        #x_current = float(x_guess)
+        x_current = float(x_start)
+
+        n_fail = 0
+
+        y = y_center
+        y = y_center + direction * step
+
+        while (direction > 0 and y <= y_max) or \
+              (direction < 0 and y >= y_min):
+
+            x_min = int(max(0, x_current - half_width))
+            x_max = int(min(nx, x_current + half_width + 1))
+
+            if x_max - x_min < 5:
+                break
+
+            # --------------------------------------------------
+            # collapse several rows to improve S/N
+            # --------------------------------------------------
+
+            trace_half_height = 2
+
+            y1 = max(0, y - trace_half_height)
+            y2 = min(ny, y + trace_half_height + 1)
+
+            profile = np.sum(
+                image[y1:y2, x_min:x_max],
+                axis=0
+            )
+
+            xpix = np.arange(x_min, x_max)
+
+            peak = np.max(profile) - np.median(profile)
+            
+            if peak < sigma_threshold * noise:
+
+                n_fail += 1
+
+                if n_fail >= max_failures:
+                    if debug:
+                        print(f"Trace stopped at y={y}")
+                    break
+
+                y += direction * step
+                continue
+                
+            
+
+            # --------------------------------------------------
+            # Gaussian fit
+            # --------------------------------------------------
+
+            fit_result = fit_order_center(profile, xpix)
+
+            success = False
+
+            if fit_result is not None:
+
+                center, amp, fwhm = fit_result
+
+                shift = np.abs(center - x_current)
+                
+
+                if shift < max_shift and fwhm < fwhm_threshold and fwhm > 1.5:
+
+                    x_current = center
+                    success = True
+                
+                
+                if debug:
+                    print(
+                        f"y={y:4d} "
+                        f"x_current={x_current:8.2f} "
+                        f"fit={center:8.2f} "
+                        f"shift={shift:5.2f}/{max_shift} "
+                        f"fwhm={fwhm:5.2f}/{fwhm_threshold} "
+                        f"success={success}"
+                    )
+            
+            # --------------------------------------------------
+            # fallback: FWHM midpoint
+            # --------------------------------------------------
+
+            success_fwhm = False
+            
+            if not success:
+
+                center = estimate_center_fwhm(profile, xpix)
+
+                if center is not None:
+
+                    shift = np.abs(center - x_current)
+
+                    if shift < max_shift:
+
+                        x_current = center
+                        success = True
+
+                        # save for plotting
+                        success_fwhm = success
+                    
+                        
+            # --------------------------------------------------
+            # bookkeeping
+            # --------------------------------------------------
+
+            if success:
+
+                n_fail = 0
+
+                y_positions.append(y)
+                x_positions.append(x_current)
+
+            else:
+
+                n_fail += 1
+
+                if n_fail >= max_failures:
+                    break
+
+                # keep previous solution
+                y_positions.append(y)
+                x_positions.append(x_current)
+
+            y += direction * step
+
+        return np.array(y_positions), np.array(x_positions)
+
+    # Trace upward and downward
+    y_up,   x_up   = follow_trace(+1, x_center_fit)
+    y_down, x_down = follow_trace(-1, x_center_fit)
+
+    # Combine both directions and include center
+    #y_points = np.concatenate((y_down[::-1], [y_center], y_up))
+    #x_points = np.concatenate((x_down[::-1], [x_guess], x_up))
+    y_points = np.concatenate((y_down[::-1], [y_center], y_up))
+    x_points = np.concatenate((x_down[::-1], [x_center_fit], x_up))
+    
+    ## new code here
+    for _ in range(number_of_iterations):
+
+        coeff = np.polyfit(y_points, x_points, poly_order)
+
+        model = np.polyval(coeff, y_points)
+
+        resid = x_points - model
+
+        sigma = 1.4826 * np.median(np.abs(resid))
+
+        good = np.abs(resid) < 3*sigma
+
+        y_points = y_points[good]
+        x_points = x_points[good]
+    
+    # Plot trace
+    if show_plot:
+        plt.figure(figsize=(10,10))
+        plt.imshow(image, origin="lower", cmap="gray", aspect='auto', vmin=0, vmax=displ_max_noise*noise)
+        plt.plot(x_points, y_points, '+r', markersize=5, label=f'Measured [{len(x_points)}]')
+        plt.legend()
+        pix_border=10
+        plt.xlim(min(x_points)-pix_border,max(x_points)+pix_border)
+        plt.xlabel("X")
+        plt.ylabel("Y")
+        plt.show()    
+    
+    return y_points, x_points
+
+
+def save_trace_table(trace_y, trace_x, n_order, output_dir, overwrite=True):
+    """ reads the (x,y) position of the trace and saves it as a txt file """
+    tbl = Table([trace_x, trace_y], names=("trace_x", "trace_y"))
+    tbl.write(output_dir + f"trace_xy_{n_order:02d}.txt", format="ascii", overwrite=overwrite)
 
 def refit_trace(trace_data, trace_channel, trace_poly_coeffs, trace_directory, trace_window=20, trace_ndeg=4, sigma_clip_threshold=3., skip_orders=[None], plot_results=True, plot_transpose=True, plot_percentile=[1,99], quiet=True, output_file_prefix=None):
     

@@ -356,7 +356,7 @@ def fit_wavelength_solution(arc_spectrum, ThAr_peak_wavelengths, ThAr_peak_pixel
     
     fit_wavelength, rms_wavesol = wavelength_calibration_iter(ThAr_peak_pixels_refined, ThAr_peak_wavelengths, order,
                                                               n_iter=wavesolution_niter, rms_threshold=wavesolution_rms_threshold,
-                                                              x_range=[1,2048], ndeg=wavesolution_ndeg,
+                                                              x_range=[0,arc_spectrum.shape[0]], ndeg=wavesolution_ndeg,
                                                               show_plot=True, figsize=(15,5), output=output_cal)
     
     
@@ -374,7 +374,7 @@ def fit_wavelength_solution(arc_spectrum, ThAr_peak_wavelengths, ThAr_peak_pixel
     # compare lines with reference atlas
     plt.figure(figsize=(15,3))
     plt.plot(ref_wavelength,ref_flux*ref_scalefactor, lw=1, color='orange',   alpha=0.75, label='reference ThAr')
-    plt.plot(wavelength_axis, arc_spectrum,           lw=1, color='black', alpha=0.5, label=f'STELES (dlambda={abs(wavelength_axis[-2]-wavelength_axis[-1]):.4f}A/pix)')
+    plt.plot(wavelength_axis, arc_spectrum-np.percentile(arc_spectrum,0.5), lw=1, color='black', alpha=0.5, label=f'STELES (dlambda={abs(wavelength_axis[-2]-wavelength_axis[-1]):.4f}A/pix)')
     txt_label = 'Reference ThAr lines'
     for wave in ThAr_peak_wavelengths:
         plt.axvline(wave,ls='--', color='red', lw=1, label=txt_label)
@@ -693,10 +693,10 @@ def fit_spatial_distortion(image, peak_positions_in_pixel, order, window=30, n_p
         sigma_current -= sigma_step
 
         if sigma_current < sigma_min:
-            self.log.warning(
-                f"Order {order}: reached minimum sigma threshold ({sigma_min}) "
-                f"with only {n_good}/{n_lines} usable lines"
-            )
+            #self.log.warning(
+            #    f"Order {order}: reached minimum sigma threshold ({sigma_min}) "
+            #    f"with only {n_good}/{n_lines} usable lines"
+            #)
             break
     
     idx_weak = ( peak_fluxes <= sigma_current * image_rms)
