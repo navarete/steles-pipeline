@@ -1,0 +1,8 @@
+astropy==X.X.X
+ccdproc==X.X.X
+lacosmic==X.X.X
+matplotlib==X.X.X
+numpy==X.X.X
+openpyxl==X.X.X
+pandas==X.X.X
+scipy==X.X.X

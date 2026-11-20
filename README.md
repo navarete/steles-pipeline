@@ -1,394 +1,313 @@
-# STELES Pipeline
+# STELES Data Reduction Pipeline
 
-**Python data reduction pipeline for the STELES high-resolution echelle spectrograph**
+**Version 2.3.0**
 
-> Experimental public testing release
+Python-based data reduction pipeline for the **STELES spectrograph** installed at the SOAR Telescope.
 
----
+The pipeline processes raw STELES observations and produces wavelength-calibrated, spatially corrected, blaze-corrected one-dimensional spectra.
 
-## Overview
+## 1. Overview
 
-The **STELES Data Reduction Pipeline** is the official Python-based data reduction pipeline for the **SOAR TELescope Echelle Spectrograph (STELES)**, developed for automated and reproducible reduction of STELES spectroscopic data.
+The STELES Data Reduction Pipeline provides a modular and reproducible workflow for reducing observations obtained with the STELES optical echelle spectrograph.
 
-The pipeline processes raw multi-extension CCD FITS data into fully calibrated one-dimensional spectra suitable for scientific analysis.
+The pipeline is written in Python and organized into two independent processing stages:
 
-Current processing includes:
+- **Part I – CCD Reduction and Order Extraction:** Performs detector preprocessing, overscan correction, amplifier merging, cosmic-ray removal, master-frame creation, spectral-order identification and tracing, extraction, and geometric rectification.
+- **Part II – Spectroscopic Calibration and Extraction:** Determines the wavelength solution, characterizes and corrects spatial distortions, calculates the blaze function, and extracts the final one-dimensional spectra.
 
-- Detector-level CCD reduction
-- Overscan correction and amplifier merging
-- Cosmic ray removal
-- Master flat / arc / science frame generation
-- Spectral order identification, tracing and refinement
-- Order extraction and geometric rectification
-- Wavelength calibration
-- Spatial distortion correction
-- Blaze function modeling and correction
-- Automated quality control diagnostics
-- JSON and HTML reduction reports
+The two stages can be executed independently. Part I generates intermediate products that serve as input to Part II, allowing users to repeat wavelength calibration and spectral extraction without repeating the initial detector processing.
 
----
+The pipeline also generates diagnostic plots and quality-control (QC) reports to help users evaluate the reduction.
 
-## Instrument Overview
+## 2. Repository Structure
 
-STELES is a high-resolution optical echelle spectrograph installed at the **4.1-m SOAR Telescope**, located at Cerro Pachón, Chile.
+The repository is organized as follows:
 
-Instrument characteristics:
+```text
+steles-pipeline/
+│
+├── steles_pipeline/
+│   ├── __init__.py
+│   ├── base_pipeline.py
+│   ├── pipeline_part1.py
+│   ├── pipeline_part2.py
+│   ├── steles_pipeline_ccd.py
+│   ├── steles_pipeline_spec.py
+│   ├── calibration/
+│   └── config/
+│
+├── notebooks/
+│   ├── STELES_pipeline_PartI_CCD.ipynb
+│   └── STELES_pipeline_PartII_Spec.ipynb
+│
+├── examples/
+│
+├── pyproject.toml
+├── README.md
+└── LICENSE
+```
 
-- Dual-channel operation:
-  - Blue channel
-  - Red channel
-- High spectral resolution (up to ~50k depending on the slit width)
-- Multi-extension CCD detector format
-- Cross-dispersed echelle format
-- Designed for precision stellar spectroscopy
+The `steles_pipeline/` directory contains the pipeline implementation, common processing routines, configuration resources, and instrument-specific calibration databases.
 
----
+The `notebooks/` directory contains the Jupyter notebooks used to configure and execute the two processing stages.
 
-## Development Status
+The `examples/` directory provides example configurations and demonstration datasets.
 
-⚠️ **This software is under active development.**
+## 3. Requirements
 
-This repository currently represents a **testing release** intended for early users.
+The pipeline requires:
 
-The pipeline is functional, but interfaces, configuration parameters, output products, and internal implementations may change.
+- Python 3.10 or newer.
+- Jupyter Notebook or JupyterLab.
+- The Python packages listed in `pyproject.toml`.
 
-Current status:
+The main external dependencies include:
 
-| Feature                        | Status     |
-|--------------------------------|------------|
-| CCD reduction                  | ✅ Stable  |
-| Order tracing                  | ✅ Stable  |
-| Spectral extraction            | ✅ Stable  |
-| Wavelength calibration         | ✅ Stable  |
-| Spatial distortion correction  | ✅ Stable  |
-| Blaze correction               | ✅ Stable  |
-| Quality control diagnostics    | ✅ Stable  |
-| Flux calibration               | 🚧 Planned |
-| Sky subtraction                | 🚧 Planned |
-| Optimal extraction             | 🚧 Planned |
+- Astropy
+- CCDProc
+- LACosmic
+- Matplotlib
+- NumPy
+- OpenPyXL
+- Pandas
+- SciPy
 
----
+The pipeline has been designed to run on Windows, macOS, and Linux.
 
-## Installation
+## 4. Installation
+
+### 4.1. Download the repository
 
 Clone the repository:
 
 ```bash
 git clone https://github.com/navarete/steles-pipeline.git
-cd STELES/pipeline/
+cd steles-pipeline
 ```
 
-Create a Python environment:
+Alternatively, download the repository as a ZIP archive and extract its contents.
+
+### 4.2. Create a Python environment
+
+It is recommended to use a dedicated Python environment:
 
 ```bash
-python -m venv venv
-source venv/bin/activate
+python -m venv steles_env
 ```
 
-Install dependencies:
+Activate the environment.
+
+Linux/macOS:
 
 ```bash
-pip install -r requirements.txt
+source steles_env/bin/activate
 ```
 
----
+Windows:
 
-## Dependencies
+```bash
+steles_env\Scripts\activate
+```
 
-Main dependencies include:
+### 4.3. Install the pipeline
 
-- Python (>= 3.10)
-- astropy (3.2.1)
-- ccdproc (2.2.0)
-- datetime (5.5)
-- glob (0.7)
-- json (0.8.5)
-- lacosmic (0.1.1)
-- logging=
-- matplotlib (3.1.1)
-- numpy (1.16.5)
-- os
-- pandas (0.25.1)
-- scipy (1.3.1)
-- time
+Install the package and its dependencies:
 
-Additional packages may be required depending on future extensions.
+```bash
+pip install -e .
+```
 
----
+This installs the pipeline in editable mode, allowing modifications to the source code without reinstalling the package.
 
-## Quick Start
+### 4.4. Install Jupyter
 
-Minimal example:
+If Jupyter is not already installed:
+
+```bash
+pip install jupyterlab
+```
+
+Start JupyterLab:
+
+```bash
+jupyter lab
+```
+
+## 5. Running the Pipeline
+
+The data reduction is performed using two Jupyter notebooks, corresponding to the two processing stages.
+
+### 5.1. Part I – CCD Reduction and Order Extraction
+
+Open:
+
+`notebooks/STELES_pipeline_PartI_CCD.ipynb`
+
+The notebook initializes the Part I pipeline class:
 
 ```python
-config = {
-    "run_stages": ["all"],
-    "overwrite": True,
-    "raw_directory": "/home/user/STELES/YYYY-MM-DD/red_channel/",
-
-    "flat_list": [flat_0001, flat_0002, flat_0003, flat_0004, flat_0005],
-    "arc_list": [arc_1s_0006, arc_60s_0007],
-    "sci_list": [sci_0008],
-    
-    "fileout_flat": "master_flat",
-    "fileout_sci":  "master_science",
-    "fileout_arc":  "master_ThAr",
-
-    "average_sigma_clip": 5,
-
-    "saturation_threshold_for_arc": 40000,
-    
-    "trace_source":               "sci",
-    "refit_trace_skip_orders":   [None],
-    "fail_on_trace_intersection": False,
-    
-    "aperture_orders": [0, 9, 19, 29, 39],
-    "aperture_vmax": {"flat": 4.0, "arc": 3.5, "sci": 4.0},
-    
-    "x_extract": [-12,+4],
-
-    "window_fit_peak":             11,
-    "wavesolution_max_fwhm":     10.0,
-    "wavelength_pixel_offset":     -2,
-    "wavesolution_ndeg":            3,
-    "wavesolution_niter":           3,
-    "wavesolution_rms_threshold": 2.0,
-    
-    "spatdist_ndeg":         2,
-    "spatdist_npix_step":    1,
-    "spatdist_saturation_threshold": 1000000,
-    "spatdist_niter":        3,
-    "spatdist_sigma_init": 3.0,
-    "spatdist_sigma_min":  1.0,
-    "spatdist_sigma_step": 0.5,
-
-    "blaze_mode":   "simple",
-    "blaze_min_deg":      15,
-    "blaze_max_deg":      55,
-    "blaze_sigma":         5,
-    "qc_blaze_ncols":      7,
-    "qc_blaze_n_panels":  10,
-    "qc_snr_n_panels":     4,
-    "qc_final1d_n_panels": 4    
-}
-
-pipeline_partI = STELES_Pipeline_PartI(config)
-pipeline_partI.run()
-
-pipeline_partII = STELES_Pipeline_PartII(config)
-pipeline_partII.run()
+from steles_pipeline import STELES_Pipeline
 ```
 
----
+Configure the input data, calibration exposures, processing parameters, and output filenames before executing the reduction.
 
-## Pipeline Architecture
+Part I produces extracted and geometrically rectified spectral orders, together with intermediate calibration products and QC diagnostics.
 
-Processing is divided into two stages:
+### 5.2. Part II – Spectroscopic Calibration and Extraction
 
-### Part I — Basic CCD Reduction & Spectral Extraction
+Open:
 
-Includes:
+`notebooks/STELES_pipeline_PartII_Spec.ipynb`
 
-- Overscan correction
-- Amplifier gain normalization
-- Extension merging
-- Cosmic ray cleaning
-- Arc scaling
-- Master frame generation
-- Spectral order tracing
-- Aperture validation
-- Rectified order extraction
+Initialize the Part II pipeline class:
 
-Outputs:
-
-```text
-master_flat_linear.fits
-master_arc_linear.fits
-master_science_linear.fits
+```python
+from steles_pipeline import STELES_Pipeline_PartII
 ```
 
----
+Specify the intermediate products generated by Part I, together with the required calibration exposures and output settings.
 
-### Part II — Calibration & Final Extraction
+Part II determines and applies the wavelength and spatial-distortion solutions, calculates the blaze function, and extracts the final one-dimensional spectra.
 
-Includes:
+### 5.3. Processing Workflow
 
-- Wavelength calibration
-- Spatial distortion modeling
-- Application of calibration solutions
-- Blaze modeling
-- Final one-dimensional extraction
-- QC diagnostics
+A typical reduction follows these steps:
 
-Outputs:
+1. Organize the raw STELES FITS files.
+2. Configure and execute Part I.
+3. Inspect the master frames, spectral-order traces, extraction apertures, and rectified products.
+4. Configure and execute Part II.
+5. Inspect the wavelength solution, spatial-distortion corrections, blaze function, and final spectra.
+6. Review the QC reports and verify the quality of the final products.
 
-```text
-*_wavelength_solution.fits
-*_distortion.csv
-*_blaze.fits
-*_final_1d.fits
-```
+The blue and red detector channels must be processed independently.
 
----
+## 6. Input Data
 
-## Input Data Requirements
+The pipeline requires the following observations:
 
-Required:
+- **Quartz flat-field frames:** Used to characterize the detector response and determine the blaze function.
+- **ThAr arc frames:** Used to determine the wavelength solution and spatial-distortion model.
+- **Science frames:** Target observations and suitable standard-star exposures.
 
-- Quartz flat-field exposures (single or multiple frames)
-- ThAr arc lamp exposures (single or two frames taken with different exposure times)
-- Science observations (single or multiple frames)
+Raw observations must be provided in the standard STELES multi-extension FITS format, with one extension per amplifier.
 
-Recommended:
+Dedicated bias frames are not required by the standard reduction procedure because overscan correction is applied. Dark-frame subtraction and sky subtraction are not currently implemented.
 
-- High S/N spectrophotometric standard star for tracing (check [Optical and UV Spectrophotometric Standard Stars][https://www.eso.org/sci/observing/tools/standards/spectra.html])
+## 7. Output Products
 
-Optional (not yet implemented):
+The pipeline generates several intermediate and final data products, including:
 
-- Bias frames (using overscan instead)
-- Dark frames
-- Sky frames
+- Overscan-corrected and merged FITS frames.
+- Cosmic-ray-cleaned frames.
+- Master calibration and science frames.
+- Spectral-order tracing solutions.
+- Extracted and rectified spectral cubes.
+- Wavelength calibration solutions.
+- Spatial-distortion models.
+- Blaze-function products.
+- Final wavelength-calibrated one-dimensional spectra.
+- Diagnostic plots and machine-readable QC reports.
 
----
+Refer to the STELES User Manual for a detailed description of the output products and their corresponding FITS formats.
 
-## Configuration
+## 8. Calibration Resources
 
-Pipeline behavior is controlled through a Python configuration dictionary.
+The pipeline includes instrument-specific calibration resources and configuration files required for data processing.
 
-Main parameter groups:
+The appropriate calibration database is selected according to the observation date and detector channel, as identified from the STELES FITS headers.
 
-- Execution control
-- Detector parameters
-- Input data selection
-- Trace configuration
-- Extraction parameters
-- Wavelength calibration
-- Spatial distortion
-- Blaze correction
-- Quality control settings
+Users should avoid modifying the distributed calibration resources unless they are intentionally updating the instrument calibration database.
 
-See the documentation for full configuration details.
+## 9. Quality Control
 
----
+The pipeline generates diagnostic plots and reports at different stages of the reduction.
 
-## Quality Control
+Users should inspect the intermediate and final products, paying particular attention to:
 
-Automated QC products include:
+- Overscan correction and amplifier merging.
+- Spectral-order identification and tracing.
+- Extraction apertures and rectification.
+- Wavelength calibration residuals.
+- Spatial-distortion correction.
+- Blaze-function behavior.
+- Final spectral quality and signal-to-noise ratio.
 
-### Part I
+Successful execution does not necessarily guarantee that the resulting spectra are suitable for every scientific application.
 
-- Master frame diagnostics
-- Trace validation plots
-- Aperture validation
+## 10. Current Limitations
 
-### Part II
+The current implementation does not provide:
 
-- RMS wavelength solution histograms
-- Residual distributions
-- Dispersion stability
-- Blaze validation panels
-- Final spectral diagnostic products
+- Absolute flux calibration.
+- Telluric correction.
+- Sky subtraction.
+- Continuum normalization.
+- Automatic merging of adjacent spectral orders.
+- Combination of extracted one-dimensional spectra.
 
-All plots are automatically saved in:
+These operations must be performed during subsequent post-processing when required.
 
-```text
-RED/plots/
-```
+## 11. Documentation
 
----
+Detailed information about the pipeline installation, configuration, processing algorithms, intermediate products, output formats, and quality-control procedures is provided in the **STELES User Manual**.
 
-## Output Products
+## 12. Contributing and Development
 
-Typical directory structure:
+The pipeline is developed and maintained by the STELES instrument team.
 
-```text
-raw_directory/
-└── RED/
-    ├── plots/
-    ├── db_tracing_refit/
-    ├── db_wavelength/
-    ├── db_distortion/
-    ├── pipeline_report_partI.html
-    ├── pipeline_report_partII.html
-    └── calibrated products
-```
+Contributions, bug reports, and suggestions for improvements are welcome. Please contact the maintainer or submit an issue through the GitHub repository.
 
----
+When modifying the pipeline, users are encouraged to preserve the modular organization of the two processing stages and verify that changes do not compromise the reproducibility of existing reductions.
 
-## Documentation
+## 13. Citation and Acknowledgements
 
-Detailed documentation is available in:
+If the STELES pipeline is used in scientific publications, please acknowledge the use of the STELES spectrograph and its data reduction software.
 
-- Instrument User Manual (coming soon)
-- Example notebooks (planned)
+A formal software citation and relevant instrument references will be provided in the repository documentation.
 
----
 
-## Testing & Feedback
+### Python Dependencies
 
-This release is currently being validated by early testers.
+The following package versions were used during pipeline development and testing.
 
-If you encounter issues, please report:
+| Package | Version |
+|:--------|:--------|
+| Python | 3.11.x |
+| Astropy | x.x.x |
+| CCDProc | x.x.x |
+| LACosmic | x.x.x |
+| Matplotlib | x.x.x |
+| NumPy | x.x.x |
+| OpenPyXL | x.x.x |
+| Pandas | x.x.x |
+| SciPy | x.x.x |
 
-- operating system
-- Python version
-- input dataset description
-- configuration used
-- full error traceback
-- diagnostic plots (if relevant)
+The complete list of tested dependencies is available in
+[`requirements-tested.txt`](requirements-tested.txt).
 
-Feedback on:
+### Tested Platforms
 
-- installation
-- usability
-- documentation clarity
-- scientific validity
-- output quality
+The pipeline has been tested under the following operating systems
+and Python environments.
 
-is highly appreciated.
+| Operating System | Python Version | Architecture |
+|:-----------------|:---------------|:-------------|
+| Windows 10 | 3.10.x | x86_64 |
+| macOS 26.4.1 | 3.11.x | Intel |
+| Linux Mint 22.2 Cinnamon | 3.11.x | x86_64 |
 
----
+The environments listed above have been used for pipeline development
+and testing. Other operating systems and Python versions may also be
+compatible but have not necessarily been tested.
 
-## Known Limitations
+### Pipeline Validation
 
-Current limitations include:
-
-- No flux calibration
-- No sky subtraction
-- No optimal extraction
-- Limited automatic handling of pathological tracing cases
+| Pipeline Version | Part I  | Part II | Tested Date |
+|:-----------------|:--------|:--------|:------------|
+| 2.2              | Passed  | Passed  | 2026-09-30  |
+| 2.3              | Pending | Pending | —           |
 
 ---
 
-## Citation / Acknowledgment
-
-If you use STELES Pipeline in scientific work, please acknowledge:
-
-> STELES data were reduced using the STELES Data Reduction Pipeline developed by the STELES instrument team.
-
-
----
-
-## Contributing
-
-Contributions, bug reports, and feature suggestions are welcome.
-
-Please open an issue or contact the maintainers.
-
----
-
-## License
-
-BSD-3-Clause
-
----
-
-## Contact
-
-Pipeline maintainer:
-
-**Felipe Navarete**
-Laboratório Nacional de Astrofísica (LNA)
-Brazil
-
-GitHub Issues preferred for bug reports.
+**Repository:** https://github.com/navarete/steles-pipeline
