@@ -1,8 +1,13 @@
-astropy==X.X.X
-ccdproc==X.X.X
-lacosmic==X.X.X
-matplotlib==X.X.X
-numpy==X.X.X
-openpyxl==X.X.X
-pandas==X.X.X
-scipy==X.X.X
+# Reference environment:
+# Python 3.7.4
+# Tested during STELES pipeline development
+
+astropy==4.3.1
+ccdproc==2.2.0
+lacosmic==0.1.1
+matplotlib==3.5.3
+numpy==1.21.6
+openpyxl==3.0.0
+pandas==1.3.3
+PyYAML==5.1.2
+scipy==1.7.3

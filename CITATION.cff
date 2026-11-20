@@ -1,6 +1,10 @@
 cff-version: 1.2.0
-title: STELES Data Reduction Pipeline
+message: "If you use the STELES Data Reduction Pipeline in your research, please cite it as follows."
+title: "STELES Data Reduction Pipeline"
+type: software
+version: 2.3.0
 authors:
   - family-names: Navarete
     given-names: Felipe
-message: If you use this pipeline, please refer it.
+repository-code: "https://github.com/navarete/steles-pipeline"
+license: BSD-3-Clause
